@@ -8,6 +8,11 @@
 
 #import <Cocoa/Cocoa.h>
 
+typedef NS_ENUM(NSInteger, DataField) {
+    DocID = 0,
+    Type = 1,
+};
+
 @interface QueryResultController : NSObject <NSOutlineViewDataSource, NSOutlineViewDelegate>
 
 @property (copy) CBLQuery* query;
@@ -23,5 +28,6 @@
 - (IBAction) newDocument: (id)sender;
 - (IBAction) deleteDocument: (id)sender;
 - (IBAction) copy:(id)sender;
+- (void)searchField:(DataField)field withText:(NSString *)text;
 
 @end

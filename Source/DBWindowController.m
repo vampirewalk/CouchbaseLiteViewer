@@ -13,7 +13,7 @@
 #import "JSONItem.h"
 
 
-@interface DBWindowController () <NSOutlineViewDataSource>
+@interface DBWindowController () <NSOutlineViewDataSource, NSSearchFieldDelegate>
 {
     @private
     CBLDatabase* _db;
@@ -28,12 +28,17 @@
     IBOutlet NSButton* _showDeletedCheckbox;
 }
 
+@property (strong) IBOutlet NSSearchField *docSearchField;
+@property (strong) IBOutlet QueryResultController *queryController;
+
+
 @end
 
 
 
 @implementation DBWindowController
 
+@synthesize docSearchField,queryController;
 
 - (id)initWithDatabase: (CBLDatabase*)db atPath: (NSString*)dbPath
 {
@@ -56,6 +61,9 @@
     _docEditor.database = _db;
 
     [self setPath: @[_db.name]];
+    
+    [self createMenuForSearchField];
+    self.docSearchField.delegate = self;
     
     // Set up the window title:
     self.window.title = _dbPath.lastPathComponent;
@@ -306,5 +314,53 @@ static NSString* displayPath(NSArray* path) {
     NSBeep();
 }
 
+-(IBAction)performFindPanelAction:(id)sender // Called when the find command is invoked by the user
+{
+    
+}
+
+- (void) createMenuForSearchField {
+    NSMenu *menu = [[NSMenu alloc] init];
+    menu.title = @"Menu";
+    
+    NSMenuItem *docIDItem = [[NSMenuItem alloc] init];
+    docIDItem.title = @"Doc ID";
+    docIDItem.target = self;
+    docIDItem.action = @selector(changeSearchFieldItem:);
+    
+    NSMenuItem *typeItem = [[NSMenuItem alloc] init];
+    typeItem.title = @"Type";
+    typeItem.target = self;
+    typeItem.action = @selector(changeSearchFieldItem:);
+    
+    [menu addItem:docIDItem];
+    [menu addItem:typeItem];
+    
+    self.docSearchField.searchMenuTemplate = menu;
+    [self changeSearchFieldItem:docIDItem];
+}
+
+- (void)changeSearchFieldItem:(NSMenuItem *)sender {
+    ((NSSearchFieldCell*) self.docSearchField.cell).placeholderString = sender.title;
+}
+
+- (void)controlTextDidChange:(NSNotification *)obj {
+    if (obj.object == self.docSearchField) {
+        NSString *searchString = self.docSearchField.stringValue;
+        static dispatch_block_t task;
+        if (task) {
+            dispatch_block_cancel(task);
+        }
+        
+        task = dispatch_block_create(DISPATCH_BLOCK_BARRIER, ^{
+            if ([self.docSearchField.placeholderString isEqualToString:@"Doc ID"]) {
+                [self.queryController searchField:DocID withText:searchString];
+            } else if ([self.docSearchField.placeholderString isEqualToString:@"Type"]) {
+                [self.queryController searchField:Type withText:searchString];
+            }
+        });
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), task);
+    }
+}
 
 @end

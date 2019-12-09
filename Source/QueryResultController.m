@@ -21,6 +21,9 @@
 @private
     CBLLiveQuery* _query;
     NSMutableArray* _rows;
+    NSMutableArray* _displayRows;
+    NSString *searchText;
+    DataField dataField;
     NSOutlineView* _docsOutline;
     NSMutableDictionary* _columnPaths;
 
@@ -101,8 +104,14 @@
 
             CBLQueryEnumerator* rows = _query.rows;
             _rows = rows.allObjects.mutableCopy;
+            if (searchText.length > 0) {
+                [self searchField:dataField withText:searchText];
+                [_docsOutline reloadData];
+            } else {
+                _displayRows = [_rows mutableCopy];
+            }
             if (_docsOutline.sortDescriptors)
-                [_rows sortUsingDescriptors: _docsOutline.sortDescriptors];
+                [_displayRows sortUsingDescriptors: _docsOutline.sortDescriptors];
             [_docsOutline reloadData];
 
             self.selectedDocuments = selection;
@@ -119,7 +128,7 @@
 - (void) outlineView:(NSOutlineView *)outlineView
          sortDescriptorsDidChange:(NSArray *)oldDescriptors
 {
-    [_rows sortUsingDescriptors: outlineView.sortDescriptors];
+    [_displayRows sortUsingDescriptors: outlineView.sortDescriptors];
     [outlineView reloadData];
 }
 
@@ -189,7 +198,7 @@
 
 - (CBLQueryRow*) queryRowForDocument: (CBLDocument*)doc {
     NSString* docID = doc.documentID;
-    for (CBLQueryRow* row in _rows) {
+    for (CBLQueryRow* row in _displayRows) {
         if ([row.documentID isEqualToString: docID])
             return row;
     }
@@ -273,7 +282,7 @@ static NSString* formatProperty( id property ) {
 
 - (NSInteger)outlineView:(NSOutlineView *)outlineView numberOfChildrenOfItem:(id)item {
     if (item == nil)
-        return _rows.count;
+        return _displayRows.count;
     else
         return 0;
 }
@@ -281,7 +290,7 @@ static NSString* formatProperty( id property ) {
 
 - (id)outlineView:(NSOutlineView *)outlineView child:(NSInteger)index ofItem:(id)item {
     if (item == nil)
-        return [self itemForQueryRow: _rows[index]];
+        return [self itemForQueryRow: _displayRows[index]];
     else
         return nil;
 }
@@ -357,6 +366,33 @@ static NSString* formatProperty( id property ) {
     [pb setString: result forType: NSStringPboardType];
 }
 
+- (void)searchField:(DataField)field withText:(NSString *)text {
+    searchText = text;
+    dataField = field;
+    if (text.length == 0) {
+        _displayRows = [_rows mutableCopy];
+    } else {
+        [_displayRows removeAllObjects];
+        for (CBLQueryRow *row in _rows) {
+            NSString *fieldValue = nil;
+            switch (field) {
+                case DocID:
+                    fieldValue = row.documentID;
+                    if ([fieldValue containsString:text]) {
+                        [_displayRows addObject:row];
+                    }
+                    break;
+                case Type:
+                    fieldValue = row.document[@"type"];
+                    if ([fieldValue containsString:text]) {
+                        [_displayRows addObject:row];
+                    }
+                    break;
+            }
+        }
+    }
+    [_docsOutline reloadData];
+}
 
 @end
 

@@ -17,6 +17,7 @@
 - (IBAction) showDocRevisionTree:(id)sender;
 - (IBAction) newDocument: (id)sender;
 - (IBAction) deleteDocument: (id)sender;
+- (IBAction) performFindPanelAction:(id)sender;
 
 /** Either the QueryResultController or the RevTreeController */
 @property (unsafe_unretained, readonly) id outlineController;
